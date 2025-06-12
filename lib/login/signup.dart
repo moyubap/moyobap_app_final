@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../main.dart'; // ✅ AuthGate로 이동하기 위해 import
+import 'login.dart'; // 🔸 로그인 페이지로 이동하려면 이 import 필요
 
 class SignupPage extends StatefulWidget {
   const SignupPage({Key? key}) : super(key: key);
@@ -42,13 +42,16 @@ class _SignupPageState extends State<SignupPage> {
           'createdAt': Timestamp.now(),
         });
 
+        // ✅ 자동 로그인 끊고 로그인 페이지로 이동
+        await FirebaseAuth.instance.signOut();
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('회원가입 성공')),
+          const SnackBar(content: Text('회원가입이 완료되었습니다. 로그인 해주세요.')),
         );
 
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const AuthGate()),
+          MaterialPageRoute(builder: (_) => const LoginPage()),
               (route) => false,
         );
       } on FirebaseAuthException catch (e) {
