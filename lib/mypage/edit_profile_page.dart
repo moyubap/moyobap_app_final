@@ -39,7 +39,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _nicknameController.text = data['nickname'] ?? '';
       _nameController.text = data['name'] ?? '';
       _bioController.text = data['bio'] ?? '';
-      _likesController.text = data['likes'] ?? '';
+      _likesController.text = (data['likes'] is List)
+          ? (data['likes'] as List).join(', ')
+          : (data['likes'] ?? '');
       _dislikesController.text = data['dislikes'] ?? '';
       _age = data['age'];
       _gender = data['gender'];
@@ -71,16 +73,27 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final uid = FirebaseAuth.instance.currentUser!.uid;
     final imageUrl = await _uploadImage(uid);
 
-    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+    final likesList = _likesController.text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    final data = {
       'nickname': _nicknameController.text.trim(),
       'name': _nameController.text.trim(),
       'bio': _bioController.text.trim(),
-      'likes': _likesController.text.trim(),
+      'likes': likesList,
       'dislikes': _dislikesController.text.trim(),
       'age': _age,
       'gender': _gender,
-      if (imageUrl != null) 'profileImage': imageUrl,
-    });
+    };
+
+    if (imageUrl != null && imageUrl.trim().isNotEmpty) {
+      data['profileImage'] = imageUrl;
+    }
+
+    await FirebaseFirestore.instance.collection('users').doc(uid).update(data);
 
     setState(() => _isLoading = false);
 
@@ -155,11 +168,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     onTap: _pickImage,
                     child: CircleAvatar(
                       radius: 50,
+                      backgroundColor: _imageFile == null &&
+                          (_existingImageUrl == null || _existingImageUrl!.isEmpty)
+                          ? appBarColor
+                          : null,
                       backgroundImage: _imageFile != null
                           ? FileImage(_imageFile!)
                           : (_existingImageUrl != null && _existingImageUrl!.isNotEmpty
                           ? NetworkImage(_existingImageUrl!)
-                          : const AssetImage('assets/users/profile1.jpg')) as ImageProvider,
+                          : null),
+                      child: (_imageFile == null &&
+                          (_existingImageUrl == null || _existingImageUrl!.isEmpty))
+                          ? const Icon(Icons.person, color: Colors.white, size: 40)
+                          : null,
                     ),
                   ),
                 ),
@@ -170,7 +191,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   controller: _nicknameController,
                   cursorColor: primaryColor,
                   decoration: const InputDecoration(labelText: '닉네임'),
-                  validator: (value) => value == null || value.isEmpty ? '필수 항목입니다' : null,
+                  validator: (value) =>
+                  value == null || value.isEmpty ? '필수 항목입니다' : null,
                 ),
                 const SizedBox(height: 12),
                 Text("이메일: $email", style: const TextStyle(color: Colors.grey)),
@@ -210,7 +232,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 TextFormField(
                   controller: _likesController,
                   cursorColor: primaryColor,
-                  decoration: const InputDecoration(labelText: '좋아하는 음식'),
+                  decoration: const InputDecoration(
+                    labelText: '좋아하는 음식',
+                    hintText: '예: cake, pizza, 떡볶이',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -227,7 +252,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   child: const Text(
                     '저장하기',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ],

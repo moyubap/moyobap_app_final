@@ -50,7 +50,8 @@ class ProfileDetailPage extends StatelessWidget {
           final data = snapshot.data!.data() as Map<String, dynamic>?;
           if (data == null) return const Center(child: Text("프로필 정보가 없습니다."));
 
-          final hasProfileImage = data['profileImage'] != null && (data['profileImage'] as String).isNotEmpty;
+          final hasProfileImage = data['profileImage'] != null &&
+              (data['profileImage'] as String).isNotEmpty;
 
           return ListView(
             padding: const EdgeInsets.all(20),
@@ -89,7 +90,12 @@ class ProfileDetailPage extends StatelessWidget {
               _infoTile("한 줄 소개", data['bio']),
               _infoTile("나이", data['age']?.toString()),
               _infoTile("성별", data['gender']),
-              _infoTile("좋아하는 음식", data['likes']),
+              _infoTile(
+                "좋아하는 음식",
+                data['likes'] is List
+                    ? (data['likes'] as List).join(', ')
+                    : data['likes']?.toString(),
+              ),
               _infoTile("싫어하는 음식", data['dislikes']),
             ],
           );
@@ -107,7 +113,7 @@ class ProfileDetailPage extends StatelessWidget {
       ),
       child: ListTile(
         title: Text(title),
-        subtitle: Text(value ?? "없음"),
+        subtitle: Text((value == null || value.trim().isEmpty) ? "없음" : value),
       ),
     );
   }

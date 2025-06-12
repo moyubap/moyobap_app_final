@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../main.dart'; // ✅ AuthGate 사용
 
 class LoginPhonePage extends StatefulWidget {
   const LoginPhonePage({super.key});
@@ -15,59 +16,91 @@ class _LoginPhonePageState extends State<LoginPhonePage> {
   bool _codeSent = false;
   late String _verificationId;
 
+  final Color mainColor = const Color(0xFFAEDCF7);
+  final Color focusBlue = const Color(0xFF42A5F5);
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("모여밥")),
-      body: Padding(
-        padding: const EdgeInsets.all(15),
-        child: Center(
-          child: Form(
-            key: _key,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                phoneNumberInput(),
-                const SizedBox(height: 15),
-                _codeSent ? const SizedBox.shrink() : submitButton(),
-                const SizedBox(height: 15),
-                _codeSent ? smsCodeInput() : const SizedBox.shrink(),
-                const SizedBox(height: 15),
-                _codeSent ? verifyButton() : const SizedBox.shrink(),
-              ],
+    return Theme(
+      data: ThemeData(
+        primaryColor: mainColor,
+        colorScheme: ColorScheme.fromSwatch().copyWith(
+          primary: focusBlue,
+          secondary: focusBlue,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: mainColor,
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(48),
+            textStyle: const TextStyle(fontSize: 18),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFF42A5F5), width: 2),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.black26),
+          ),
+          labelStyle: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: mainColor,
+          centerTitle: true,
+          elevation: 0,
+          title: const Text(
+            "모여밥",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 2)],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  TextFormField phoneNumberInput() {
-    return TextFormField(
-      controller: _phoneController,
-      autofocus: true,
-      validator: (val) => val == null || val.isEmpty ? '전화번호를 입력하세요.' : null,
-      keyboardType: TextInputType.phone,
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(),
-        hintText: '+82 00-0000-0000',
-        labelText: '전화번호',
-        labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  TextFormField smsCodeInput() {
-    return TextFormField(
-      controller: _smsCodeController,
-      autofocus: true,
-      validator: (val) => val == null || val.isEmpty ? '인증번호를 입력하세요.' : null,
-      keyboardType: TextInputType.number,
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(),
-        hintText: '인증번호를 입력해주세요.',
-        labelText: '인증번호',
-        labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        body: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Center(
+            child: Form(
+              key: _key,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    validator: (val) =>
+                    val == null || val.isEmpty ? '전화번호를 입력하세요.' : null,
+                    decoration: const InputDecoration(
+                      hintText: '+82 10-1234-5678',
+                      labelText: '전화번호',
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  if (!_codeSent) submitButton(),
+                  const SizedBox(height: 15),
+                  if (_codeSent)
+                    TextFormField(
+                      controller: _smsCodeController,
+                      keyboardType: TextInputType.number,
+                      validator: (val) =>
+                      val == null || val.isEmpty ? '인증번호를 입력하세요.' : null,
+                      decoration: const InputDecoration(
+                        hintText: '인증번호를 입력해주세요.',
+                        labelText: '인증번호',
+                      ),
+                    ),
+                  const SizedBox(height: 15),
+                  if (_codeSent) verifyButton(),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -80,9 +113,13 @@ class _LoginPhonePageState extends State<LoginPhonePage> {
           await auth.verifyPhoneNumber(
             phoneNumber: _phoneController.text.trim(),
             verificationCompleted: (PhoneAuthCredential credential) async {
-              await auth
-                  .signInWithCredential(credential)
-                  .then((_) => Navigator.pushReplacementNamed(context, "/main"));
+              await auth.signInWithCredential(credential).then((_) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AuthGate()),
+                      (route) => false,
+                );
+              });
             },
             verificationFailed: (FirebaseAuthException e) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -93,7 +130,7 @@ class _LoginPhonePageState extends State<LoginPhonePage> {
                 ),
               );
             },
-            codeSent: (String verificationId, int? forceResendingToken) async {
+            codeSent: (String verificationId, int? forceResendingToken) {
               setState(() {
                 _codeSent = true;
                 _verificationId = verificationId;
@@ -101,15 +138,11 @@ class _LoginPhonePageState extends State<LoginPhonePage> {
             },
             codeAutoRetrievalTimeout: (verificationId) {
               _verificationId = verificationId;
-              print("Auto retrieval timeout");
             },
           );
         }
       },
-      child: const Padding(
-        padding: EdgeInsets.all(15),
-        child: Text("인증번호 보내기", style: TextStyle(fontSize: 18)),
-      ),
+      child: const Text("인증번호 보내기"),
     );
   }
 
@@ -123,8 +156,13 @@ class _LoginPhonePageState extends State<LoginPhonePage> {
             smsCode: _smsCodeController.text.trim(),
           );
 
-          await auth.signInWithCredential(credential)
-              .then((_) => Navigator.pushReplacementNamed(context, "/main"));
+          await auth.signInWithCredential(credential).then((_) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const AuthGate()),
+                  (route) => false,
+            );
+          });
         } on FirebaseAuthException catch (e) {
           String message = '인증에 실패했습니다. 다시 시도하세요.';
           if (e.code == 'invalid-verification-code') {
@@ -147,10 +185,7 @@ class _LoginPhonePageState extends State<LoginPhonePage> {
           );
         }
       },
-      child: const Padding(
-        padding: EdgeInsets.all(15),
-        child: Text("로그인", style: TextStyle(fontSize: 18)),
-      ),
+      child: const Text("로그인"),
     );
   }
 }

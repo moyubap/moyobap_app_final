@@ -37,25 +37,18 @@ class _PostDetailPageState extends State<PostDetailPage> {
     final postRef = FirebaseFirestore.instance.collection('posts').doc(widget.post.postId);
 
     setState(() {
-      if (isLiked) {
-        isLiked = false;
-        likeCount--;
-      } else {
-        isLiked = true;
-        likeCount++;
-      }
+      isLiked = !isLiked;
+      likeCount += isLiked ? 1 : -1;
     });
 
-    if (isLiked) {
-      await postRef.update({'likes': FieldValue.arrayUnion([currentUser!.uid])});
-    } else {
-      await postRef.update({'likes': FieldValue.arrayRemove([currentUser!.uid])});
-    }
+    await postRef.update({
+      'likes': isLiked
+          ? FieldValue.arrayUnion([currentUser!.uid])
+          : FieldValue.arrayRemove([currentUser!.uid])
+    });
   }
 
-  bool get isMyPost {
-    return currentUser != null && widget.post.hostId == currentUser!.uid;
-  }
+  bool get isMyPost => currentUser != null && widget.post.hostId == currentUser!.uid;
 
   @override
   Widget build(BuildContext context) {
@@ -73,19 +66,19 @@ class _PostDetailPageState extends State<PostDetailPage> {
             fontWeight: FontWeight.bold,
             color: Colors.white,
             fontSize: 24,
-            shadows: [
-              Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 2),
-            ],
+            shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 2)],
           ),
         ),
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-          shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 2)],
-        ),
-        actions: [
-          if (isMyPost) ...[
-            IconButton(icon: const Icon(Icons.edit), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WritePage(post: post)))),
-            IconButton(icon: const Icon(Icons.delete), onPressed: () async {
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: isMyPost
+            ? [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WritePage(post: post))),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () async {
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
@@ -100,9 +93,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 await FirebaseFirestore.instance.collection('posts').doc(post.postId).delete();
                 if (context.mounted) Navigator.pop(context);
               }
-            }),
-          ]
-        ],
+            },
+          ),
+        ]
+            : null,
       ),
       body: Column(
         children: [
@@ -130,23 +124,28 @@ class _PostDetailPageState extends State<PostDetailPage> {
                           final profileUrl = user['profileImage'];
 
                           return GestureDetector(
-                            onTap: () => Navigator.push(context, MaterialPageRoute(
-                              builder: (_) => UserProfilePage(userId: post.hostId),
-                            )),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => UserProfilePage(userId: post.hostId)),
+                            ),
                             child: Row(
                               children: [
-                                CircleAvatar(
-                                  backgroundImage: profileUrl != null && profileUrl.isNotEmpty
-                                      ? NetworkImage(profileUrl)
-                                      : const AssetImage('assets/users/profile1.jpg') as ImageProvider,
+                                profileUrl != null && profileUrl.isNotEmpty
+                                    ? CircleAvatar(
+                                  backgroundImage: NetworkImage(profileUrl),
                                   radius: 22,
+                                )
+                                    : CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor: appMainBlue,
+                                  child: const Icon(Icons.person, color: Colors.white),
                                 ),
                                 const SizedBox(width: 8),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(nickname, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                                    const Text('작성자', style: TextStyle(fontSize: 12, color: Colors.grey))
+                                    const Text('작성자', style: TextStyle(fontSize: 12, color: Colors.grey)),
                                   ],
                                 ),
                               ],
@@ -154,53 +153,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                           );
                         },
                       ),
-                      const SizedBox(height: 6),
-                      const Divider(thickness: 1.0, color: Colors.black12),
-                      const SizedBox(height: 12),
-                      const SizedBox(height: 20),
-                      Text(post.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 20),
                       const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          constraints: const BoxConstraints(minWidth: 160),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              GestureDetector(
-                                onTap: () async {
-                                  final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeQueryComponent(post.placeName)}');
-                                  if (!await launchUrl(uri)) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('지도를 열 수 없습니다.')),
-                                    );
-                                  }
-                                },
-                                child: _iconRow(
-                                  Icons.place,
-                                  post.placeName,
-                                  Colors.redAccent,
-                                  underline: true,
-                                  linkColor: Colors.blue,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              _iconRow(Icons.calendar_today, post.meetTime.toDate().toString().split(" ")[0], Colors.green),
-                              const SizedBox(height: 12),
-                              _iconRow(Icons.access_time, post.meetTime.toDate().toString().split(" ")[1].substring(0, 5), Colors.deepPurple),
-                              const SizedBox(height: 12),
-                              _iconRow(Icons.restaurant, post.foodType, Colors.orange),
-                            ],
-                          ),
-                        ),
-                      ),
+                      _infoSection(post),
                       const SizedBox(height: 24),
                       Text(post.content, style: const TextStyle(height: 1.8, fontSize: 16)),
                       const SizedBox(height: 28),
@@ -219,7 +173,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                               if (!snapshot.hasData) return const SizedBox();
                               final data = snapshot.data!.data() as Map<String, dynamic>;
                               final views = data['views'] ?? 0;
-                              return Text('관심 $likeCount ∙ 조회수 $views', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600));
+                              return Text('관심 $likeCount ∙ 조회수 $views',
+                                  style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600));
                             },
                           ),
                         ],
@@ -260,82 +215,116 @@ class _PostDetailPageState extends State<PostDetailPage> {
               ],
             ),
           ),
-          SafeArea(
-            child: Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              width: double.infinity,
-              child: Center(
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final currentUser = FirebaseAuth.instance.currentUser;
-                      final otherUserId = post.hostId;
-                      if (currentUser == null || currentUser.uid == otherUserId) return;
-
-                      final uids = [currentUser.uid, otherUserId]..sort();
-                      final chatRoomId = uids.join('_');
-                      final chatRoomRef = FirebaseFirestore.instance.collection('chat_rooms').doc(chatRoomId);
-                      final postRef = FirebaseFirestore.instance.collection('posts').doc(post.postId);
-
-                      final snapshot = await chatRoomRef.get();
-                      if (!snapshot.exists) {
-                        await chatRoomRef.set({
-                          'members': uids,
-                          'createdAt': FieldValue.serverTimestamp(),
-                          'lastMessage': '',
-                        });
-                      } else {
-                        await chatRoomRef.update({
-                          'members': FieldValue.arrayUnion([currentUser.uid])
-                        });
-                      }
-
-                      await postRef.update({
-                        'participantIds': FieldValue.arrayUnion([currentUser.uid]),
-                      });
-
-                      if (context.mounted) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatDetailPage(
-                              otherUserId: otherUserId,
-                              chatRoomId: chatRoomId,
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: appMainBlue,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 4,
-                      shadowColor: Colors.black45,
-                    ),
-                    child: const Text('채팅 신청하기', style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      shadows: [
-                        Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 1),
-                      ],
-                    )),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          _chatButton(post, appMainBlue),
         ],
       ),
     );
   }
 
-  Widget _iconRow(IconData icon, String label, Color iconColor, {bool underline = false, Color? linkColor}) {
+  Widget _infoSection(RecruitPost post) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 160),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GestureDetector(
+              onTap: () async {
+                final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeQueryComponent(post.placeName)}');
+                if (!await launchUrl(uri)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('지도를 열 수 없습니다.')),
+                  );
+                }
+              },
+              child: _iconRow(Icons.place, post.placeName, Colors.redAccent, underline: true, linkColor: Colors.blue),
+            ),
+            const SizedBox(height: 12),
+            _iconRow(Icons.calendar_today, post.meetTime.toDate().toString().split(" ")[0], Colors.green),
+            const SizedBox(height: 12),
+            _iconRow(Icons.access_time, post.meetTime.toDate().toString().split(" ")[1].substring(0, 5), Colors.deepPurple),
+            const SizedBox(height: 12),
+            _iconRow(Icons.restaurant, post.foodType, Colors.orange),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chatButton(RecruitPost post, Color appMainBlue) {
+    return SafeArea(
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () async {
+            final currentUser = FirebaseAuth.instance.currentUser;
+            final otherUserId = post.hostId;
+            if (currentUser == null || currentUser.uid == otherUserId) return;
+
+            final uids = [currentUser.uid, otherUserId]..sort();
+            final chatRoomId = uids.join('_');
+            final chatRoomRef = FirebaseFirestore.instance.collection('chat_rooms').doc(chatRoomId);
+            final postRef = FirebaseFirestore.instance.collection('posts').doc(post.postId);
+
+            final snapshot = await chatRoomRef.get();
+            if (!snapshot.exists) {
+              await chatRoomRef.set({
+                'members': uids,
+                'createdAt': FieldValue.serverTimestamp(),
+                'lastMessage': '',
+              });
+            } else {
+              await chatRoomRef.update({
+                'members': FieldValue.arrayUnion([currentUser.uid])
+              });
+            }
+
+            await postRef.update({
+              'participantIds': FieldValue.arrayUnion([currentUser.uid]),
+            });
+
+            if (context.mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ChatDetailPage(
+                    otherUserId: otherUserId,
+                    chatRoomId: chatRoomId,
+                  ),
+                ),
+              );
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: appMainBlue,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            elevation: 4,
+            shadowColor: Colors.black45,
+          ),
+          child: const Text('채팅 신청하기',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 1)],
+              )),
+        ),
+      ),
+    );
+  }
+
+  Widget _iconRow(IconData icon, String label, Color iconColor,
+      {bool underline = false, Color? linkColor}) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),

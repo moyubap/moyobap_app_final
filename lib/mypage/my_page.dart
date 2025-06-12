@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'profile_detail_page.dart';
 import 'my_post_page.dart';
+import '../main.dart'; // ✅ AuthGate 사용을 위해 import 필요
 
 class MyPage extends StatefulWidget {
   const MyPage({super.key});
@@ -125,7 +126,11 @@ class _MyPageState extends State<MyPage> {
             title: "로그아웃",
             onTap: () async {
               await FirebaseAuth.instance.signOut();
-              Navigator.pushReplacementNamed(context, '/login');
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const AuthGate()),
+                    (route) => false,
+              );
             },
           ),
         ],

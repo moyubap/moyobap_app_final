@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import '../main.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({Key? key}) : super(key: key);
@@ -15,8 +16,10 @@ class ProfileSetupPage extends StatefulWidget {
 
 class _ProfileSetupPageState extends State<ProfileSetupPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nicknameController = TextEditingController();
-  final TextEditingController _bioController = TextEditingController();
+  final _nicknameController = TextEditingController();
+  final _bioController = TextEditingController();
+  final _likesController = TextEditingController();     // ✅ 추가
+  final _dislikesController = TextEditingController();  // ✅ 추가
 
   File? _imageFile;
   bool _isSaving = false;
@@ -43,9 +46,18 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     final uid = FirebaseAuth.instance.currentUser!.uid;
     final imageUrl = await _uploadImage(uid);
 
+    // ✅ 좋아하는 음식 → List<String> 으로 파싱
+    final likesList = _likesController.text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
     await FirebaseFirestore.instance.collection('users').doc(uid).set({
       'nickname': _nicknameController.text.trim(),
       'bio': _bioController.text.trim(),
+      'likes': likesList,
+      'dislikes': _dislikesController.text.trim(),
       'uid': uid,
       'createdAt': Timestamp.now(),
       if (imageUrl != null) 'profileImage': imageUrl,
@@ -53,7 +65,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
     setState(() => _isSaving = false);
 
-    Navigator.pushReplacementNamed(context, '/home');
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const AuthGate()),
+          (route) => false,
+    );
   }
 
   @override
@@ -101,6 +117,23 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   controller: _bioController,
                   decoration: const InputDecoration(
                     labelText: '한 줄 소개',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _likesController,
+                  decoration: const InputDecoration(
+                    labelText: '좋아하는 음식 (쉼표로 구분)',
+                    hintText: '예: cake, ramen, 떡볶이',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _dislikesController,
+                  decoration: const InputDecoration(
+                    labelText: '싫어하는 음식',
                     border: OutlineInputBorder(),
                   ),
                 ),

@@ -38,17 +38,18 @@ class UserProfilePage extends StatelessWidget {
           if (data == null) return const Center(child: Text("사용자 정보 없음"));
 
           final nickname = data['nickname'] ?? '알 수 없음';
-          final university = data['university'] ?? '미입력';
-          final major = data['major'] ?? '미입력';
-          final intro = data['bio'] ?? '소개 없음';
+          final oneLinerRaw = data['bio']; // ✅ 'bio'로 바꿈
+          final oneLiner = (oneLinerRaw == null || oneLinerRaw.toString().trim().isEmpty)
+              ? '없음'
+              : oneLinerRaw.toString();
+
           final favoriteFoods = data['likes'] is List ? List<String>.from(data['likes']) : [];
-          final location = data['location'] ?? '없음';
+          final dislikesRaw = data['dislikes'];
+          final dislikes = (dislikesRaw == null || dislikesRaw.toString().trim().isEmpty)
+              ? '없음'
+              : dislikesRaw.toString();
+
           final profileImage = data['profileImage'];
-          final age = data['age'] ?? '없음';
-          final gender = data['gender'] ?? '없음';
-          final oneLiner = data['oneLine'] ?? '없음';
-          final dislikes = data['dislikes'] ?? '없음';
-          final favorites = data['favorites'] ?? '없음';
 
           return FutureBuilder<QuerySnapshot>(
             future: FirebaseFirestore.instance
@@ -71,58 +72,49 @@ class UserProfilePage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        CircleAvatar(
+                        profileImage != null && profileImage != ''
+                            ? CircleAvatar(
                           radius: 50,
-                          backgroundImage: (profileImage != null && profileImage != '')
-                              ? NetworkImage(profileImage)
-                              : const AssetImage('assets/users/profile1.jpg') as ImageProvider,
+                          backgroundImage: NetworkImage(profileImage),
+                        )
+                            : const CircleAvatar(
+                          radius: 50,
                           backgroundColor: primaryColor,
+                          child: Icon(Icons.person, color: Colors.white, size: 40),
                         ),
                         const SizedBox(height: 12),
                         Text(nickname, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        Text('$university ∙ $major', style: const TextStyle(color: Colors.grey)),
-                        const SizedBox(height: 4),
-                        Text('$age세 ∙ $gender', style: const TextStyle(color: Colors.grey)),
 
                         const SizedBox(height: 24),
-                        const Align(alignment: Alignment.centerLeft, child: Text('한 줄 소개', style: TextStyle(fontWeight: FontWeight.bold))),
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('한 줄 소개', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
                         const SizedBox(height: 4),
                         Align(alignment: Alignment.centerLeft, child: Text(oneLiner)),
 
                         const SizedBox(height: 16),
-                        const Align(alignment: Alignment.centerLeft, child: Text('자기소개', style: TextStyle(fontWeight: FontWeight.bold))),
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('좋아하는 음식', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
                         const SizedBox(height: 4),
-                        Align(alignment: Alignment.centerLeft, child: Text(intro)),
-
-                        const SizedBox(height: 16),
-                        const Align(alignment: Alignment.centerLeft, child: Text('좋아하는 음식', style: TextStyle(fontWeight: FontWeight.bold))),
-                        const SizedBox(height: 8),
                         Align(
                           alignment: Alignment.centerLeft,
-                          child: Wrap(
-                            spacing: 8,
-                            children: favoriteFoods.map((food) => Chip(label: Text('#$food'))).toList(),
-                          ),
+                          child: favoriteFoods.isEmpty
+                              ? const Text('없음')
+                              : Text(favoriteFoods.join(', '), style: const TextStyle(fontSize: 16)),
                         ),
 
                         const SizedBox(height: 16),
-                        const Align(alignment: Alignment.centerLeft, child: Text('좋아하는 것', style: TextStyle(fontWeight: FontWeight.bold))),
-                        Align(alignment: Alignment.centerLeft, child: Text(favorites.toString())),
-
-                        const SizedBox(height: 12),
-                        const Align(alignment: Alignment.centerLeft, child: Text('싫어하는 것', style: TextStyle(fontWeight: FontWeight.bold))),
-                        Align(alignment: Alignment.centerLeft, child: Text(dislikes.toString())),
-
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            const Icon(Icons.location_on_outlined, size: 20),
-                            const SizedBox(width: 4),
-                            Text('선호 지역: $location'),
-                          ],
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('싫어하는 음식', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
+                        const SizedBox(height: 4),
+                        Align(alignment: Alignment.centerLeft, child: Text(dislikes)),
 
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 28),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

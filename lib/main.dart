@@ -111,11 +111,29 @@ class _MainPageState extends State<MainPage> {
             ],
           ),
           unselectedIconTheme: const IconThemeData(size: 24),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home, size: 24), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.map, size: 25), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline, size: 23), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline, size: 26), label: ''),
+          items: [
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.home, size: 24),
+              label: '',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.map, size: 25),
+              label: '',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                currentIndex == 2 ? Icons.chat_bubble : Icons.chat_bubble_outline,
+                size: 23,
+              ),
+              label: '',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                currentIndex == 3 ? Icons.person : Icons.person_outline,
+                size: 26,
+              ),
+              label: '',
+            ),
           ],
         ),
       ),
