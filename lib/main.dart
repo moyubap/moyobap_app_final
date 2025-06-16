@@ -12,6 +12,9 @@ import 'login/signup.dart';
 import 'login/loginPhone.dart';
 import 'home_page/location_picker_page.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -74,7 +77,7 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> {
+class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   int currentIndex = 0;
 
   final List<Widget> pages = [
@@ -83,6 +86,46 @@ class _MainPageState extends State<MainPage> {
     const ChatListPage(),
     const MyPage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _updateMyStatus(isOnline: true);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _updateMyStatus(isOnline: false); // 앱 종료시 오프라인 처리(옵션)
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 앱 포그라운드/백그라운드 상태 반영 (선택)
+    if (state == AppLifecycleState.resumed) {
+      _updateMyStatus(isOnline: true);
+    } else if (state == AppLifecycleState.paused) {
+      _updateMyStatus(isOnline: false);
+    }
+  }
+
+  Future<void> _updateMyStatus({required bool isOnline}) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    Position? pos;
+    try {
+      pos = await Geolocator.getCurrentPosition();
+    } catch (_) {}
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    await userDoc.set({
+      'isOnline': isOnline,
+      'lastActive': FieldValue.serverTimestamp(),
+      if (pos != null)
+        'location': GeoPoint(pos.latitude, pos.longitude),
+    }, SetOptions(merge: true));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +138,8 @@ class _MainPageState extends State<MainPage> {
           onTap: (index) {
             setState(() {
               currentIndex = index;
+              // 페이지 이동시에도 상태 갱신 (옵션)
+              _updateMyStatus(isOnline: true);
             });
           },
           backgroundColor: Colors.white,
