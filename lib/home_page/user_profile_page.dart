@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../chat/chat_detail_page.dart';
+
 
 class UserProfilePage extends StatelessWidget {
   final String userId;
@@ -29,6 +32,50 @@ class UserProfilePage extends StatelessWidget {
         ),
       ),
       backgroundColor: Colors.white,
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton.icon(
+          onPressed: () async {
+            final currentUser = FirebaseAuth.instance.currentUser;
+            if (currentUser == null || currentUser.uid == userId) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('자기 자신과 채팅할 수 없습니다.')),
+              );
+              return;
+            }
+            final uids = [currentUser.uid, userId]..sort();
+            final chatRoomId = uids.join('_');
+            final chatRoomRef = FirebaseFirestore.instance.collection('chat_rooms').doc(chatRoomId);
+            final snapshot = await chatRoomRef.get();
+            if (!snapshot.exists) {
+              await chatRoomRef.set({
+                'members': uids,
+                'createdAt': FieldValue.serverTimestamp(),
+                'lastMessage': '',
+              });
+            }
+            if (context.mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ChatDetailPage(
+                    otherUserId: userId,
+                    chatRoomId: chatRoomId,
+                  ),
+                ),
+              );
+            }
+          },
+          icon: const Icon(Icons.chat),
+          label: const Text('채팅하기', style: TextStyle(fontSize: 17)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF42A5F5),
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(48),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      ),
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
         builder: (context, snapshot) {
