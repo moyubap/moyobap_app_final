@@ -3,20 +3,55 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../chat/chat_detail_page.dart';
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> b0ec3c9 (Initial commit)
 class UserProfilePage extends StatelessWidget {
   final String userId;
 
   const UserProfilePage({super.key, required this.userId});
 
+<<<<<<< HEAD
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFFB3E5FC);
+=======
+  Future<Map<String, dynamic>> fetchUserData() async {
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    final userData = userDoc.data() ?? {};
+
+    final postSnap = await FirebaseFirestore.instance
+        .collection('posts')
+        .where('hostId', isEqualTo: userId)
+        .get();
+
+    final chatSnap = await FirebaseFirestore.instance
+        .collection('chat_rooms')
+        .where('members', arrayContains: userId)
+        .get();
+
+    return {
+      'nickname': userData['nickname'] ?? '알 수 없음',
+      'intro': userData['intro'] ?? '없음',
+      'profileImage': userData['profileImage'] ?? '',
+      'likedFoods': List<String>.from(userData['likedFoods'] ?? []),
+      'dislikedFoods': List<String>.from(userData['dislikedFoods'] ?? []),
+      'postCount': postSnap.docs.length,
+      'chatCount': chatSnap.docs.length,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const primaryColor = Color(0xFFB3E5FC);
+>>>>>>> b0ec3c9 (Initial commit)
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 0,
+<<<<<<< HEAD
         iconTheme: const IconThemeData(
           color: Colors.white,
           shadows: [Shadow(color: Colors.black38, offset: Offset(0, 1), blurRadius: 2)],
@@ -29,6 +64,12 @@ class UserProfilePage extends StatelessWidget {
             fontWeight: FontWeight.bold,
             shadows: [Shadow(color: Colors.black38, offset: Offset(0, 1), blurRadius: 2)],
           ),
+=======
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          '상대방 프로필',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+>>>>>>> b0ec3c9 (Initial commit)
         ),
       ),
       backgroundColor: Colors.white,
@@ -76,6 +117,7 @@ class UserProfilePage extends StatelessWidget {
           ),
         ),
       ),
+<<<<<<< HEAD
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
         builder: (context, snapshot) {
@@ -182,6 +224,98 @@ class UserProfilePage extends StatelessWidget {
                 },
               );
             },
+=======
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: fetchUserData(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+          final data = snapshot.data!;
+          final nickname = data['nickname'];
+          final intro = data['intro'];
+          final image = data['profileImage'];
+          final likedFoods = data['likedFoods'];
+          final dislikedFoods = data['dislikedFoods'];
+          final postCount = data['postCount'];
+          final chatCount = data['chatCount'];
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                image != ''
+                    ? CircleAvatar(radius: 50, backgroundImage: NetworkImage(image))
+                    : const CircleAvatar(
+                  radius: 50,
+                  backgroundColor: primaryColor,
+                  child: Icon(Icons.person, size: 40, color: Colors.white),
+                ),
+                const SizedBox(height: 12),
+                Text(nickname, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 24),
+
+                // 한 줄 소개
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('한 줄 소개', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text(intro),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // 좋아하는 음식
+                if (likedFoods.isNotEmpty) ...[
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('좋아하는 음식', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 8,
+                    children: likedFoods.map<Widget>((f) => Chip(label: Text(f))).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // 싫어하는 음식
+                if (dislikedFoods.isNotEmpty) ...[
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('싫어하는 음식', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 8,
+                    children: dislikedFoods.map<Widget>((f) => Chip(label: Text(f))).toList(),
+                  ),
+                ],
+
+                const SizedBox(height: 28),
+
+                // 모집글, 채팅 신청 수
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.edit_note, size: 20, color: Colors.orange),
+                    const SizedBox(width: 6),
+                    Text('모집 글: $postCount회'),
+
+                    const SizedBox(width: 24),
+
+                    const Icon(Icons.chat_bubble_outline, size: 18, color: Colors.blueGrey),
+                    const SizedBox(width: 6),
+                    Text('채팅 신청: $chatCount회'),
+                  ],
+                ),
+              ],
+            ),
+>>>>>>> b0ec3c9 (Initial commit)
           );
         },
       ),
